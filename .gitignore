@@ -1,0 +1,11 @@
+﻿# local runtime files
+.env
+
+# editor and cache
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# temp artifacts
+node_modules/

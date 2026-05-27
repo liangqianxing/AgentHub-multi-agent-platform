@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AgentHub 多 Agent 协作平台</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <div class="brand-mark">AH</div>
+          <div>
+            <h1>AgentHub</h1>
+            <p>多 Agent 协作平台</p>
+          </div>
+        </div>
+        <div class="sidebar-actions">
+          <button id="newChatButton">新建对话</button>
+          <button id="newAgentButton" class="ghost">自建 Agent</button>
+        </div>
+        <label class="search">
+          <span>搜索</span>
+          <input id="conversationSearch" placeholder="搜索会话或 Agent" />
+        </label>
+        <div class="section-title">会话</div>
+        <div id="conversationList" class="conversation-list"></div>
+        <div class="section-title">Agent 联系人</div>
+        <div id="agentList" class="agent-list"></div>
+      </aside>
+
+      <main class="chat-panel">
+        <header class="chat-header">
+          <div>
+            <div class="eyebrow" id="chatMode">群聊协作</div>
+            <h2 id="chatTitle">AgentHub 需求评审</h2>
+            <p id="chatSubtitle">Orchestrator 正在协调 Codex、Claude Code、OpenCode 与 Designer</p>
+          </div>
+          <div class="header-actions">
+            <button id="guideButton" class="ghost">怎么用</button>
+            <button id="demoButton" class="ghost">一键演示</button>
+            <button id="pinSummaryButton" class="ghost">上下文摘要</button>
+            <button id="deployButton">部署</button>
+          </div>
+        </header>
+
+        <section id="guidePanel" class="guide-panel">
+          <div>
+            <strong>3 步体验 AgentHub</strong>
+            <p>① 点“一键演示”或发送示例任务 → ② 看多个 Agent 自动协作 → ③ 点 Diff / 部署卡片查看产物变化。</p>
+          </div>
+          <button id="closeGuideButton" class="ghost">知道了</button>
+        </section>
+
+        <div id="pinnedContext" class="pinned-context hidden"></div>
+        <section id="messageList" class="message-list"></section>
+
+        <footer class="composer">
+          <div id="mentionBar" class="mention-bar"></div>
+          <div class="prompt-presets">
+            <button class="ghost preset" data-prompt="@Orchestrator 帮我做一个 AI 作品集网站，包含首页、项目卡片和一键部署。">作品集网站</button>
+            <button class="ghost preset" data-prompt="@Designer 重新设计当前页面，让聊天更像飞书，按钮更少更清楚。">优化 UI</button>
+            <button class="ghost preset" data-prompt="@Codex 生成登录页组件，并给出可应用 Diff。">生成组件</button>
+          </div>
+          <textarea id="messageInput" rows="3" placeholder="输入任务，例如：@Orchestrator 帮我做一个 AI 作品集网站，包含首页、项目卡片和一键部署。"></textarea>
+          <div class="composer-actions">
+            <span>不会用就点上面的示例；Enter 发送，Shift + Enter 换行</span>
+            <button id="sendButton">发送</button>
+          </div>
+        </footer>
+      </main>
+
+      <aside class="workspace">
+        <div class="workspace-tabs">
+          <button class="tab active" data-tab="preview">预览</button>
+          <button class="tab" data-tab="code">代码</button>
+          <button class="tab" data-tab="history">版本</button>
+        </div>
+        <section id="previewPanel" class="workspace-panel active">
+          <div class="preview-toolbar">
+            <span id="previewUrl">https://agenthub.demo/site/portfolio</span>
+            <strong id="previewBadge" class="preview-badge">V0 初稿</strong>
+            <button id="refreshPreviewButton" class="ghost">刷新</button>
+          </div>
+          <iframe id="artifactFrame" title="artifact preview"></iframe>
+        </section>
+        <section id="codePanel" class="workspace-panel">
+          <pre><code id="codeViewer"></code></pre>
+        </section>
+        <section id="historyPanel" class="workspace-panel">
+          <div id="versionHistory" class="history-list"></div>
+        </section>
+      </aside>
+    </div>
+
+    <dialog id="chatDialog">
+      <form method="dialog" class="dialog-card">
+        <h3>新建对话</h3>
+        <label>对话名称<input id="chatNameInput" value="新的 Agent 任务" /></label>
+        <label>模式
+          <select id="chatTypeInput">
+            <option value="group">群聊协作</option>
+            <option value="single">单聊模式</option>
+          </select>
+        </label>
+        <div class="dialog-actions">
+          <button value="cancel" class="ghost">取消</button>
+          <button id="createChatConfirm" value="default">创建</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="agentDialog">
+      <form method="dialog" class="dialog-card">
+        <h3>自建 Agent</h3>
+        <label>名称<input id="agentNameInput" value="Researcher" /></label>
+        <label>能力标签<input id="agentTagsInput" value="调研,资料整理,竞品分析" /></label>
+        <label>System Prompt<textarea id="agentPromptInput" rows="4">你是研究型 Agent，擅长把开放问题拆解为可验证的信息清单。</textarea></label>
+        <div class="dialog-actions">
+          <button value="cancel" class="ghost">取消</button>
+          <button id="createAgentConfirm" value="default">创建</button>
+        </div>
+      </form>
+    </dialog>
+
+    <script src="./app.js"></script>
+  </body>
+</html>
