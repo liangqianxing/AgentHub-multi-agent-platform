@@ -177,14 +177,14 @@ function renderWorkspace() {
   $("#versionHistory").innerHTML = versions.map((version) => `<div class="history-item"><strong>${version.title}</strong><span>${version.time}</span><p>${version.desc}</p></div>`).join("");
 }
 
-function sendMessage() {
+async function sendMessage() {
   const text = messageInput.value.trim();
   if (!text) return;
   const conversation = activeConversation();
   conversation.messages.push(makeMessage("user", text));
   messageInput.value = "";
   render();
-  simulateAgents(text, conversation);
+  await callRealAgents(text, conversation);
 }
 
 function runDemo() {
@@ -192,29 +192,40 @@ function runDemo() {
   sendMessage();
 }
 
-function simulateAgents(text, conversation) {
-  const lower = text.toLowerCase();
-  const wantsDeploy = text.includes("部署") || lower.includes("deploy");
-  const wantsCode = text.includes("代码") || text.includes("网站") || lower.includes("code");
-  const plan = [
-    ["orchestrator", `我已读取当前会话上下文，并将任务拆成 4 个子任务：\n1. Designer 产出信息架构与视觉方向。\n2. Claude Code 校验组件边界和数据结构。\n3. Codex 生成可应用 Diff 与代码。\n4. Deployer 在产物通过后生成预览地址。`],
-    ["designer", "建议采用三栏答辩布局：左侧会话、中间 Agent 协作流、右侧产物工作台。作品集网站使用深色科技风，突出项目卡片、能力标签和部署 CTA。", { type: "preview", title: "设计预览卡片" }],
-    ["claude", "架构建议：把 AgentAdapter、ConversationStore、ArtifactRenderer、DeploymentService 分层。真实接入时只替换 adapter.send(messages, tools)，UI 和调度逻辑保持稳定。"],
-  ];
-  if (wantsCode) {
-    plan.push(["codex", "我生成了一个面向作品集首页的 Diff，可直接应用到右侧预览。", { type: "diff", title: "portfolio-home.diff", lines: ["--- app/PortfolioHero.tsx", "+++ app/PortfolioHero.tsx", "- <h1>AI Portfolio</h1>", "+ <h1>用多 Agent 构建你的 AI 作品集</h1>", "+ <ProjectGrid items={featuredProjects} />", "+ <DeployCTA status=\"ready\" />"] }]);
-    plan.push(["opencode", "我补充本地运行方案：静态 Demo 可用 python -m http.server 5173 运行；真实版本建议用 Vite + API Router 代理模型调用。", { type: "code", title: "本地启动命令", code: "python -m http.server 5173\n# open http://localhost:5173/app/" }]);
+async function callRealAgents(text, conversation) {
+  const loading = makeMessage("orchestrator", "正在调用火山方舟官方 API，请稍等……");
+  conversation.messages.push(loading);
+  render();
+  try {
+    const response = await fetch("/api/agent-chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        text,
+        pinnedContext: conversation.pinnedContext,
+        history: conversation.messages.slice(-12).map((message) => ({
+          sender: message.sender,
+          senderName: getAgent(message.sender).name,
+          text: message.text,
+        })),
+      }),
+    });
+    const data = await response.json();
+    conversation.messages = conversation.messages.filter((message) => message.id !== loading.id);
+    if (!response.ok || !data.ok) {
+      throw new Error(data.error || `请求失败：${response.status}`);
+    }
+    data.replies.forEach((reply, index) => {
+      setTimeout(() => {
+        conversation.messages.push(makeMessage(reply.sender || "orchestrator", reply.text || "", reply.artifact || null));
+        render();
+      }, index * 420);
+    });
+  } catch (error) {
+    conversation.messages = conversation.messages.filter((message) => message.id !== loading.id);
+    conversation.messages.push(makeMessage("orchestrator", `真实模型调用失败：${error.message}\n请确认使用 python server.py 启动，并已在 .env 配置 ARK_API_KEY / ARK_ENDPOINT_ID。`));
+    render();
   }
-  if (wantsDeploy) {
-    plan.push(["deployer", "部署流水线已创建：构建静态产物、生成预览 URL、记录版本并支持回滚。", { type: "deploy", title: "部署状态卡片", url: "https://agenthub.demo/site/portfolio" }]);
-  }
-  plan.push(["orchestrator", "已聚合各 Agent 结果。下一步你可以点击 Diff 的“应用 Diff”更新预览，或继续要求我局部修改某个模块。"]);
-  plan.forEach((item, index) => {
-    setTimeout(() => {
-      conversation.messages.push(makeMessage(item[0], item[1], item[2] || null));
-      render();
-    }, 500 + index * 520);
-  });
 }
 
 function applyDiff() {
