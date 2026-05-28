@@ -197,6 +197,7 @@ async function callRealAgents(text, conversation) {
   conversation.messages.push(loading);
   render();
   try {
+    await ensureApiServerReady();
     const response = await fetch("/api/agent-chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -210,7 +211,7 @@ async function callRealAgents(text, conversation) {
         })),
       }),
     });
-    const data = await response.json();
+    const data = await readJsonResponse(response);
     conversation.messages = conversation.messages.filter((message) => message.id !== loading.id);
     if (!response.ok || !data.ok) {
       throw new Error(data.error || `请求失败：${response.status}`);
@@ -223,8 +224,38 @@ async function callRealAgents(text, conversation) {
     });
   } catch (error) {
     conversation.messages = conversation.messages.filter((message) => message.id !== loading.id);
-    conversation.messages.push(makeMessage("orchestrator", `真实模型调用失败：${error.message}\n请确认使用 python server.py 启动，并已在 .env 配置 ARK_API_KEY / ARK_ENDPOINT_ID。`));
+    conversation.messages.push(makeMessage("orchestrator", `真实模型调用失败：${error.message}\n\n请在项目目录运行：\npython server.py\n\n然后打开：\nhttp://127.0.0.1:5173/app/\n\n不要使用 python -m http.server，也不要直接双击 app/index.html。`));
     render();
+  }
+}
+
+async function ensureApiServerReady() {
+  let response;
+  try {
+    response = await fetch("/api/health", { cache: "no-store" });
+  } catch (error) {
+    throw new Error(`无法连接本地 API 服务：${error.message}`);
+  }
+  const health = await readJsonResponse(response, "/api/health");
+  if (!response.ok || !health.ok) {
+    throw new Error("本地 API 服务未就绪");
+  }
+  if (!health.model || !health.hasKey) {
+    throw new Error("本地 API 服务已启动，但 .env 中缺少 ARK_ENDPOINT_ID 或 ARK_API_KEY");
+  }
+}
+
+async function readJsonResponse(response, label = "/api/agent-chat") {
+  const contentType = response.headers.get("content-type") || "";
+  const text = await response.text();
+  if (!contentType.includes("application/json")) {
+    const preview = text.replace(/\s+/g, " ").slice(0, 120);
+    throw new Error(`${label} 返回的不是 JSON，而是 ${contentType || "未知类型"}。这通常表示你没有用 python server.py 启动。响应片段：${preview}`);
+  }
+  try {
+    return JSON.parse(text);
+  } catch (error) {
+    throw new Error(`${label} JSON 解析失败：${error.message}`);
   }
 }
 

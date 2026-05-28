@@ -34,7 +34,8 @@ class AgentHubHandler(SimpleHTTPRequestHandler):
         super().__init__(*args, directory=str(ROOT), **kwargs)
 
     def do_GET(self):
-        if self.path == "/api/health":
+        path = self.path.split("?", 1)[0].rstrip("/") or "/"
+        if path == "/api/health":
             self.write_json({
                 "ok": True,
                 "model": os.getenv("ARK_ENDPOINT_ID", ""),
@@ -44,7 +45,8 @@ class AgentHubHandler(SimpleHTTPRequestHandler):
         super().do_GET()
 
     def do_POST(self):
-        if self.path != "/api/agent-chat":
+        path = self.path.split("?", 1)[0].rstrip("/") or "/"
+        if path != "/api/agent-chat":
             self.send_error(404, "Not found")
             return
         try:
